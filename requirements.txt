@@ -5,4 +5,3 @@ pyinstaller==5.3
 pyinstaller-hooks-contrib==2022.8
 pywin32-ctypes==0.2.0
 requests==2.28.1
-xmltodict==0.13.0
