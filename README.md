@@ -5,7 +5,7 @@ Extract Windows Wi-Fi Passwords to a Remote URL
 Before running, install the required modules:
 
 ```
-pip install -r requirements.txt
+pip3 install -r requirements.txt
 ```
 
 # Usage
